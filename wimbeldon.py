@@ -32,9 +32,8 @@ RETIRED_PLAYERS = {
     # add others as needed
 }
 
-########################################
 # LOAD MATCHES (ONLY 2019–2024)
-########################################
+
 def load_matches(folder: str = "tennis_atp-master") -> pd.DataFrame:
     files = glob.glob(f"{folder}/atp_matches_*.csv")
     df_list = [pd.read_csv(f, low_memory=False) for f in files]
@@ -62,9 +61,8 @@ def load_matches(folder: str = "tennis_atp-master") -> pd.DataFrame:
     print("Using match data from", df["Date"].min().date(), "to", df["Date"].max().date())
     return df.dropna(subset=["PlayerA","PlayerB","Surface"]).reset_index(drop=True)
 
-########################################
 # COMPUTE ELO
-########################################
+
 def compute_elo(matches: pd.DataFrame, k=10) -> dict:
     elo = {}
     for _, r in matches.sort_values("Date").iterrows():
@@ -77,9 +75,8 @@ def compute_elo(matches: pd.DataFrame, k=10) -> dict:
         elo[b] += k*(sb-(1-ea))
     return elo
 
-########################################
 # BUILD FEATURES
-########################################
+
 def build_features(matches: pd.DataFrame, elo: dict) -> pd.DataFrame:
     players = pd.unique(matches[["PlayerA","PlayerB"]].values.ravel())
     rows = []
@@ -109,9 +106,8 @@ def build_features(matches: pd.DataFrame, elo: dict) -> pd.DataFrame:
         })
     return pd.DataFrame(rows)
 
-########################################
 # TRAIN MODEL (Balanced)
-########################################
+
 def train_match_model(matches: pd.DataFrame, feat: pd.DataFrame):
     X_rows, y = [], []
     for _, r in matches.iterrows():
@@ -154,9 +150,7 @@ def train_match_model(matches: pd.DataFrame, feat: pd.DataFrame):
     print("Log loss:", round(log_loss(yte,preds),4))
     return model, list(X.columns)
 
-########################################
 # MATCH WIN PROBABILITY
-########################################
 def predict_match_prob(model, cols, pa, pb):
     vec = {
         "EloDiff": pa["Elo"]-pb["Elo"],
@@ -170,9 +164,9 @@ def predict_match_prob(model, cols, pa, pb):
     row = pd.DataFrame([vec])[cols].fillna(0.0)
     return model.predict_proba(row)[0,1]
 
-########################################
+
 # MONTE CARLO FINAL QUALIFICATION (Top 10 with normalization)
-########################################
+
 def monte_carlo(draw, feat_df, model, cols, sims=1000):
     if len(draw) == 0:
         return {}
@@ -216,9 +210,8 @@ def monte_carlo(draw, feat_df, model, cols, sims=1000):
     else:
         return {p: 0 for p in reach}
 
-########################################
 # LOAD DRAW (Top 10 from features, excluding Cezar Cretu)
-########################################
+
 def load_draw(feats, top_n=10):
     """Load top 10 players from features, excluding retired players and Cezar Cretu"""
     try:
@@ -232,9 +225,7 @@ def load_draw(feats, top_n=10):
     except:
         return []
 
-########################################
 # MAIN
-########################################
 if __name__ == "__main__":
     print("Loading matches...")
     matches = load_matches()
@@ -266,3 +257,4 @@ if __name__ == "__main__":
         print(f"\nTotal probability check: {total_prob*100:.2f}%")
     else:
         print("No active players found for simulation!")
+
